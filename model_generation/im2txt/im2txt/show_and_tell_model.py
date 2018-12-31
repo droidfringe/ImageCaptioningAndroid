@@ -118,6 +118,10 @@ class ShowAndTellModel(object):
                                           thread_id=thread_id,
                                           image_format=self.config.image_format)
 
+  def my_process_image(self, image, thread_id=0):
+      return image_processing.my_process_image(image)
+
+
   def build_inputs(self):
     """Input prefetching, preprocessing and batching.
 
@@ -129,13 +133,15 @@ class ShowAndTellModel(object):
     """
     if self.mode == "inference":
       # In inference mode, images and inputs are fed via placeholders.
-      image_feed = tf.placeholder(dtype=tf.string, shape=[], name="image_feed")
+      #image_feed = tf.placeholder(dtype=tf.string, shape=(1,), name="image_feed")
+      image_feed = tf.placeholder(dtype=tf.float32, shape=(346, 346, 3), name="image_feed")
       input_feed = tf.placeholder(dtype=tf.int64,
-                                  shape=[None],  # batch_size
+                                  shape=[1],  # batch_size
                                   name="input_feed")
 
       # Process image and insert batch dimensions.
-      images = tf.expand_dims(self.process_image(image_feed), 0)
+      #images = tf.expand_dims(self.process_image(image_feed[0]), 0)
+      images = tf.expand_dims(self.my_process_image(image_feed), 0)
       input_seqs = tf.expand_dims(input_feed, 1)
 
       # No target sequences or input mask in inference mode.
@@ -268,7 +274,7 @@ class ShowAndTellModel(object):
 
         # Placeholder for feeding a batch of concatenated states.
         state_feed = tf.placeholder(dtype=tf.float32,
-                                    shape=[None, sum(lstm_cell.state_size)],
+                                    shape=[1, sum(lstm_cell.state_size)],
                                     name="state_feed")
         state_tuple = tf.split(value=state_feed, num_or_size_splits=2, axis=1)
 

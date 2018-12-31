@@ -131,3 +131,42 @@ def process_image(encoded_image,
   image = tf.subtract(image, 0.5)
   image = tf.multiply(image, 2.0)
   return image
+
+def my_process_image(image_in,
+                  resize_height=346,
+                  resize_width=346,
+                  thread_id=0,
+                  image_format="jpeg"):
+  """resize uint8 image for feeding to inception-v3
+
+  Args:
+    encoded_image: String Tensor containing the image.
+    is_training: Boolean; whether preprocessing for training or eval.
+    height: Height of the output image. = 299
+    width: Width of the output image. = 299
+    resize_height: If > 0, resize height before crop to final dimensions.
+    resize_width: If > 0, resize width before crop to final dimensions.
+
+  Returns:
+    A float32 Tensor of shape [height, width, 3] with values in [-1, 1].
+  """
+
+
+  #image = tf.image.convert_image_dtype(image_in, dtype=tf.float32)
+  image = image_in
+
+  # Resize image.
+  image = tf.image.resize_images(image,
+                                   size=[resize_height, resize_width],
+                                   method=tf.image.ResizeMethod.BILINEAR)
+
+  # Crop to final dimensions.
+
+  image = tf.image.resize_image_with_crop_or_pad(image, 299, 299)
+
+  # Rescale to [-1,1] instead of [0, 1]
+  image = tf.subtract(image, 0.5)
+  image = tf.multiply(image, 2.0)
+  return image
+
+

@@ -135,6 +135,7 @@ class CaptionGenerator(object):
     self.model = model
 
     self.beam_size = beam_size
+    self.beam_size = 1
     self.max_caption_length = max_caption_length
     self.length_normalization_factor = length_normalization_factor
 
@@ -149,7 +150,9 @@ class CaptionGenerator(object):
       A list of Caption sorted by descending score.
     """
     # Feed in the image to get the initial state.
-    initial_state = self.model.feed_image(sess, encoded_image)
+    #initial_state = sess.run(fetches="import/lstm/initial_state:0", feed_dict={"import/image_feed:0": encoded_image})
+    #initial_state = sess.run(fetches="lstm/initial_state:0", feed_dict={"image_feed:0": [encoded_image]})
+    initial_state = sess.run(fetches="lstm/initial_state:0", feed_dict={"image_feed:0": encoded_image})
 
     initial_beam = Caption(
         sentence=[self.vocab.start_id],
@@ -157,6 +160,7 @@ class CaptionGenerator(object):
         logprob=0.0,
         score=0.0,
         metadata=[""])
+
     partial_captions = TopN(self.beam_size)
     partial_captions.push(initial_beam)
     complete_captions = TopN(self.beam_size)

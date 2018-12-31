@@ -29,6 +29,9 @@ from im2txt import inference_wrapper
 from im2txt.inference_utils import caption_generator
 from im2txt.inference_utils import vocabulary
 
+import cv2
+import numpy as np
+
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string("checkpoint_path", "",
@@ -64,14 +67,20 @@ def main(_):
     # Load the model from checkpoint.
     restore_fn(sess)
 
+    #output_node_names = [n.name for n in g.as_graph_def().node]
+
+
     # Prepare the caption generator. Here we are implicitly using the default
     # beam search parameters. See caption_generator.py for a description of the
     # available beam search parameters.
     generator = caption_generator.CaptionGenerator(model, vocab)
 
     for filename in filenames:
-      with tf.gfile.GFile(filename, "rb") as f:
-        image = f.read()
+      #with tf.gfile.GFile(filename, "rb") as f:
+      #  image = f.read()
+      image = cv2.imread(filename)
+      image = image.astype(np.float32)
+      image = image / 255.0
       captions = generator.beam_search(sess, image)
       print("Captions for image %s:" % os.path.basename(filename))
       for i, caption in enumerate(captions):
@@ -79,6 +88,29 @@ def main(_):
         sentence = [vocab.id_to_word(w) for w in caption.sentence[1:-1]]
         sentence = " ".join(sentence)
         print("  %d) %s (p=%f)" % (i, sentence, math.exp(caption.logprob)))
+
+
+    """
+    input_names = {'image_feed:0': (), 'input_feed:0': (1,), 'lstm/state_feed:0': (1,1024)}
+    input_tensors = {x: g.get_tensor_by_name(x) for x in input_names}
+    for n,t in input_tensors.items():
+      print('old: ', t, tf.shape(t))
+      tf.reshape(t, input_names[n])
+      print('new: ', t, tf.shape(t))
+
+    g.finalize()
+    """
+    #output_tensors = [g.get_tensor_by_name(x) for x in output_names]
+
+    output_node_names = ["lstm/initial_state", "softmax", "lstm/state"]
+    frozen_graph_def = tf.graph_util.convert_variables_to_constants(
+      sess,
+      sess.graph_def,
+      output_node_names)
+
+    # Save the frozen graph
+    with open('/home/droid/show_and_tell/im2txt/im2txt/data/output_graph_4.pb', 'wb') as f:
+      f.write(frozen_graph_def.SerializeToString())
 
 
 if __name__ == "__main__":
