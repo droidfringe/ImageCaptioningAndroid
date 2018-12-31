@@ -27,7 +27,9 @@
     <string name="cpu">CPU</string>
     <string name="modelLabel">Model</string>
     <string name="deviceLabel">Device</string>
+    <string name="action_settings">Settings</string>
     <string name="mobilenetV1Quant">mobilenet v1 quant</string>;
     <string name="mobilenetV1Float">mobilenet v1 float</string>;;
+
 
 </resources>
