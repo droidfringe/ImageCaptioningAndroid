@@ -29,7 +29,6 @@ This is done in model_generation/im2txt/im2txt/cherry_pick.py
 5) After getting a working .tflite model, use it in android app.
 In the andorid app, Captioner.java performs image captioning by using .tflite model.
 
-For running the android app, copy the .tflite model from https://drive.google.com/open?id=1qeod8BevqGoYIJd8pAF9bQ0oLOtipCn2 to android_apps/google_tflite_demo/demo/app/src/main/assets/
 
 The final app borrows components from 2 apps:
 a) Google's tflite demo app: https://github.com/tensorflow/tensorflow/tree/master/tensorflow/lite/java/demo
