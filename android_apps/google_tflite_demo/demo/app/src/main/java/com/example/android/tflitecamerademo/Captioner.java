@@ -71,10 +71,13 @@ public class Captioner {
 
     private static final String TAG = "TfLiteCameraDemo";
     private final Interpreter.Options tfliteOptions = new Interpreter.Options();
+    private final Interpreter.Options tfliteOptions_lstm = new Interpreter.Options();
     // The loaded TensorFlow Lite model.
     private MappedByteBuffer tfliteModel;
+    private MappedByteBuffer tfliteModel_lstm;
     // An instance of the driver class to run model inference with Tensorflow Lite.
     protected Interpreter tflite;
+    protected Interpreter tflite_lstm;
     // A ByteBuffer to hold image data, to be feed into Tensorflow Lite as inputs.
     protected ByteBuffer imgData = null;
 
@@ -90,8 +93,13 @@ public class Captioner {
 
     Captioner(Activity activity) throws IOException {
     //Captioner(Activity activity) {
-        tfliteModel = loadModelFile(activity);
+        String inceptionModelPath = getInceptionModelPath();
+        String lstmModelPath = getLSTMModelPath();
+        tfliteModel = loadModelFile(activity, inceptionModelPath);
         tflite = new Interpreter(tfliteModel, tfliteOptions);
+
+        tfliteModel_lstm = loadModelFile(activity, lstmModelPath);
+        tflite_lstm = new Interpreter(tfliteModel_lstm, tfliteOptions_lstm);
 
         //labelList = loadLabelList(activity);
 //        imgData =
@@ -141,13 +149,18 @@ public class Captioner {
         tflite.close();
         tflite = null;
         tfliteModel = null;
+
+        tflite_lstm.close();
+        tflite_lstm = null;
+        tfliteModel_lstm = null;
+
     }
 
 
     // Memory-map the model file in Assets.
     //private MappedByteBuffer loadModelFile(Activity activity) throws IOException {
-    private MappedByteBuffer loadModelFile(Activity activity) throws IOException {
-        AssetFileDescriptor fileDescriptor = activity.getAssets().openFd(getModelPath());
+    private MappedByteBuffer loadModelFile(Activity activity, String modelFileName) throws IOException {
+        AssetFileDescriptor fileDescriptor = activity.getAssets().openFd(modelFileName);
         FileInputStream inputStream = new FileInputStream(fileDescriptor.getFileDescriptor());
         FileChannel fileChannel = inputStream.getChannel();
         long startOffset = fileDescriptor.getStartOffset();
@@ -155,8 +168,12 @@ public class Captioner {
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength);
     }
 
-    private String getModelPath() {
-        return "show_and_tell_converted_model.tflite";
+    private String getInceptionModelPath() {
+        return "inceptionv3_1.tflite";
+    }
+
+    private String getLSTMModelPath() {
+        return "lstm_2.tflite";
     }
 
 
@@ -165,20 +182,22 @@ public class Captioner {
 
 
     private String runInference(){
-        Map<Integer, Object> outputs = new TreeMap<Integer, Object>();
-        Object [] inputs = new Object[3];
-        inputs[0] = image_feed;
-        inputs[1] = input_feed;
-        inputs[2] = state_feed;
+        Map<Integer, Object> outputs_cnn = new TreeMap<Integer, Object>();
+        Map<Integer, Object> outputs_lstm = new TreeMap<Integer, Object>();
+        Object [] inputs_cnn = new Object[1];
+        Object [] inputs_lstm = new Object[2];
+        inputs_cnn[0] = image_feed;
+        inputs_lstm[0] = input_feed;
+        inputs_lstm[1] = state_feed;
 
         Log.d(TAG, "inputs complete");
 
-        outputs.put(tflite.getOutputIndex("import/softmax"), softmax);
-        outputs.put(tflite.getOutputIndex("import/lstm/state"), lstm_state);
-        outputs.put(tflite.getOutputIndex("import/lstm/initial_state"), initial_state);
+        outputs_lstm.put(tflite_lstm.getOutputIndex("import/softmax"), softmax);
+        outputs_lstm.put(tflite_lstm.getOutputIndex("import/lstm/state"), lstm_state);
+        outputs_cnn.put(tflite.getOutputIndex("import/lstm/initial_state"), initial_state);
 
         Log.d(TAG, "outputs complete");
-        tflite.runForMultipleInputsOutputs(inputs, outputs);
+        tflite.runForMultipleInputsOutputs(inputs_cnn, outputs_cnn);
 
 
         int maxCaptionLength = 20;
@@ -195,7 +214,7 @@ public class Captioner {
         int maxIdx;
         for(int i=0;i<maxCaptionLength;i++)
         {
-            tflite.runForMultipleInputsOutputs(inputs, outputs);
+            tflite_lstm.runForMultipleInputsOutputs(inputs_lstm, outputs_lstm);
             maxIdx = findMaximumIdx(softmax[0]);
             words.add(maxIdx);
             // TODO - replace with vocab.end_id
